@@ -1,0 +1,139 @@
+erDiagram
+    HOUSEHOLDS ||--o{ USERS : "has auth identities"
+    HOUSEHOLDS ||--o{ MEMBERS : "has payers/participants"
+    HOUSEHOLDS ||--o{ CATEGORY_GROUPS : defines
+    HOUSEHOLDS ||--o{ CATEGORIES : defines
+    HOUSEHOLDS ||--o{ MERCHANT_CATEGORY_MAP : learns
+    HOUSEHOLDS ||--o{ PROPERTIES : owns
+    HOUSEHOLDS ||--o{ PROPERTY_TAXES : records
+    HOUSEHOLDS ||--o{ PROPERTY_INSURANCE_POLICIES : records
+    HOUSEHOLDS ||--o{ INCOMES : records
+    HOUSEHOLDS ||--o{ EXPENSES : records
+    HOUSEHOLDS ||--o{ MONTHLY_BUDGETS : plans
+    HOUSEHOLDS ||--o{ SETTLEMENTS : reconciles
+
+    USERS |o--o| MEMBERS : "optionally linked"
+    CATEGORY_GROUPS ||--o{ CATEGORIES : groups
+    CATEGORIES ||--o{ EXPENSES : classifies
+    CATEGORIES ||--o{ MONTHLY_BUDGETS : targets
+    CATEGORIES ||--o{ MERCHANT_CATEGORY_MAP : "auto-fills"
+
+    MEMBERS ||--o{ INCOMES : earns
+    PROPERTIES ||--o{ INCOMES : "rental source"
+    PROPERTIES ||--o{ PROPERTY_TAXES : "assessed on"
+    PROPERTIES ||--o{ PROPERTY_INSURANCE_POLICIES : "insured by"
+
+    MEMBERS ||--o{ EXPENSES : "paid_by"
+    EXPENSES ||--o{ EXPENSE_SPLITS : "resolves to"
+    MEMBERS ||--o{ EXPENSE_SPLITS : "owes share"
+    MEMBERS ||--o{ SETTLEMENTS : "owed_by / owed_to"
+
+    HOUSEHOLDS {
+        uuid id PK
+        text name
+        text base_currency
+    }
+    USERS {
+        uuid id PK
+        uuid household_id FK
+        text email
+        text role "owner | member"
+    }
+    MEMBERS {
+        uuid id PK
+        uuid household_id FK
+        uuid user_id FK "nullable - payer need not log in"
+        text name "Hayley, Michael"
+        bool is_active
+    }
+    CATEGORY_GROUPS {
+        uuid id PK
+        uuid household_id FK
+        text name "flexible | fixed | investments | savings"
+    }
+    CATEGORIES {
+        uuid id PK
+        uuid household_id FK
+        uuid category_group_id FK
+        text name "Groceries, Gas, Bars..."
+        bool is_active
+    }
+    MERCHANT_CATEGORY_MAP {
+        uuid id PK
+        uuid household_id FK
+        text merchant "Costco, King Soopers"
+        uuid category_id FK "last/most-used category"
+    }
+    PROPERTIES {
+        uuid id PK
+        uuid household_id FK
+        text name "Saulsbury, 16th Ave"
+    }
+    PROPERTY_TAXES {
+        uuid id PK
+        uuid household_id FK
+        uuid property_id FK
+        date period_start
+        date period_end "nullable - current"
+        bigint assessed_value_cents "nullable"
+        numeric rate_pct "nullable - e.g. 0.0087"
+        bigint amount_cents "nullable - static bill"
+    }
+    PROPERTY_INSURANCE_POLICIES {
+        uuid id PK
+        uuid household_id FK
+        uuid property_id FK
+        text carrier
+        text policy_number
+        bigint premium_cents
+        text cadence "monthly | quarterly | semiannual | annual"
+        date period_start
+        date period_end "nullable - current/auto-renewing"
+    }
+    INCOMES {
+        uuid id PK
+        uuid household_id FK
+        uuid member_id FK
+        uuid property_id FK "nullable"
+        date period "year-month"
+        text source "salary | rent | dividend | other"
+        bigint amount_cents
+        jsonb tax_meta "brackets later"
+    }
+    EXPENSES {
+        uuid id PK
+        uuid household_id FK
+        date txn_date
+        text merchant
+        bigint amount_cents
+        uuid category_id FK
+        uuid paid_by_member_id FK
+        text split_rule "full | equal | income_weighted | custom"
+        uuid full_target_member_id FK "for full: whose budget"
+        jsonb custom_weights "for custom: member->pct"
+    }
+    EXPENSE_SPLITS {
+        uuid id PK
+        uuid expense_id FK
+        uuid member_id FK
+        bigint amount_cents "resolved share"
+        timestamptz frozen_at "null=live for open month"
+    }
+    MONTHLY_BUDGETS {
+        uuid id PK
+        uuid household_id FK
+        uuid category_id FK
+        date period "year-month"
+        text goal_type "percent_of_income | fixed_amount"
+        numeric percent "nullable"
+        bigint amount_cents "nullable"
+    }
+    SETTLEMENTS {
+        uuid id PK
+        uuid household_id FK
+        date period "year-month"
+        uuid owed_by_member_id FK
+        uuid owed_to_member_id FK
+        bigint amount_cents
+        timestamptz paid_back_at "null=unsettled"
+    }
