@@ -1,0 +1,13 @@
+{
+  "name": "budget-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Household budget app - dev tooling root (Supabase CLI, etc.)",
+  "license": "UNLICENSED",
+  "scripts": {
+    "supabase": "supabase"
+  },
+  "devDependencies": {
+    "supabase": "^2.109.1"
+  }
+}
