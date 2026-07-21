@@ -60,6 +60,21 @@ Local Postgres connection string is typically:
 `postgresql://postgres:postgres@localhost:54322/postgres`
 (point `pgx` / sqlc at this for local dev; confirm via `supabase status`).
 
+### About the `ANON_KEY` (and other printed keys)
+
+`ANON_KEY` is a JWT that identifies a request to GoTrue/PostgREST as coming
+from an unauthenticated ("anonymous") client — required on every Auth API
+call (e.g. signup/login), signed-in or not. It's project identification, not
+a secret that proves who a *user* is.
+
+- **Local dev only**: this exact key is a fixed, well-known default identical
+  across every local Supabase install everywhere. Safe to paste into Postman,
+  curl, etc. Forgot it? `supabase status` reprints it.
+- **Remote/production is different**: a real project's `anon` key is
+  project-specific (still safe to expose client-side, by design), but the
+  `SERVICE_ROLE_KEY` must never be exposed to a browser or committed to git —
+  it bypasses RLS entirely.
+
 ## First-time setup (run once, in this order)
 
 ```bash
@@ -109,6 +124,20 @@ sqlc generate                          # regenerate Go types from the schema
   It bypasses migrations and makes `db push` fail. All changes go through
   migration files.
 - ❌ Delete, rename, or reorder files in `supabase/migrations/` after they've run.
+
+## Running the Go API locally
+
+```bash
+cd apps/api
+cp .env.example .env    # once — fill in local values (already correct by default)
+go run ./cmd/api        # loads .env automatically (godotenv), listens on :8080
+```
+
+`.env` is required — the server calls `log.Fatal` on startup if `JWKS_URL`
+isn't set. `.env` is gitignored; `.env.example` is the committed template.
+
+For testing endpoints (getting a bearer token, Postman setup), see
+`docs/POSTMAN.md`.
 
 ## "How do I know what's going on?"
 
